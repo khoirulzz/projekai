@@ -84,9 +84,9 @@ export default {
         if (!apiResponse.ok) {
           const errorText = await apiResponse.text();
           return new Response(
-            JSON.stringify({ 
-              error: `Blackbox API error: ${apiResponse.status}`, 
-              details: errorText 
+            JSON.stringify({
+              error: `Blackbox API error: ${apiResponse.status}`,
+              details: errorText
             }),
             { status: apiResponse.status, headers: { ...headers, 'Content-Type': 'application/json' } }
           );
