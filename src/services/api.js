@@ -18,17 +18,22 @@ export async function sendMessage(messages, mode = 'paraphrase', model = 'deepse
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = '';
+  let buffer = '';
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    
+    // Keep the last partial line in the buffer
+    buffer = lines.pop() || '';
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('data: ')) {
+        const data = trimmedLine.slice(6).trim();
         if (data === '[DONE]') {
           return fullText;
         }
@@ -39,11 +44,29 @@ export async function sendMessage(messages, mode = 'paraphrase', model = 'deepse
             fullText += content;
             onChunk?.(fullText);
           }
-        } catch {
-          // Non-JSON data, treat as raw text
-          fullText += data;
+        } catch (e) {
+          // If JSON parse fails but it's not empty, it might be a malformed chunk
+          // We shouldn't blindly append it to fullText to avoid UI corruption
+          console.warn('Failed to parse chunk:', data);
+        }
+      }
+    }
+  }
+
+  // Handle any remaining data in buffer if it's a complete message
+  const finalLine = buffer.trim();
+  if (finalLine.startsWith('data: ')) {
+    const data = finalLine.slice(6).trim();
+    if (data !== '[DONE]') {
+      try {
+        const parsed = JSON.parse(data);
+        const content = parsed.choices?.[0]?.delta?.content || '';
+        if (content) {
+          fullText += content;
           onChunk?.(fullText);
         }
+      } catch (e) {
+        console.warn('Failed to parse final chunk:', data);
       }
     }
   }
