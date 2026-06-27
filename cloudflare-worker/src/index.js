@@ -1,13 +1,3 @@
-/**
- * ResearchAI — Cloudflare Worker
- * 
- * Proxy yang aman untuk Blackbox Pro API.
- * API key disimpan sebagai Cloudflare Secret, tidak pernah terekspos ke frontend.
- * 
- * Setup:
- *   1. npx wrangler secret put BLACKBOX_API_KEY
- *   2. npx wrangler deploy
- */
 
 const BLACKBOX_API_URL = 'https://api.blackbox.ai/api/chat';
 
@@ -26,6 +16,7 @@ function corsHeaders(origin, allowedOrigin) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const pathname = url.pathname.replace(/\/+/g, '/');
     const origin = request.headers.get('Origin') || '';
     const allowedOrigin = env.ALLOWED_ORIGIN || '*';
     const headers = corsHeaders(origin, allowedOrigin);
@@ -36,7 +27,7 @@ export default {
     }
 
     // Health check
-    if (url.pathname === '/health') {
+    if (pathname === '/health') {
       return new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), {
         status: 200,
         headers: { ...headers, 'Content-Type': 'application/json' },
@@ -44,7 +35,7 @@ export default {
     }
 
     // Main chat endpoint
-    if (url.pathname === '/api/chat' && request.method === 'POST') {
+    if (pathname === '/api/chat' && request.method === 'POST') {
       try {
         const apiKey = env.BLACKBOX_API_KEY;
         if (!apiKey) {

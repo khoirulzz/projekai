@@ -1,4 +1,4 @@
-name = "research-ai-worker"
+name = "young-heart-a562"
 main = "src/index.js"
 compatibility_date = "2024-12-01"
 
@@ -6,4 +6,4 @@ compatibility_date = "2024-12-01"
 # Jangan letakkan API key di sini!
 # Gunakan: npx wrangler secret put BLACKBOX_API_KEY
 # untuk menyimpan API key secara aman sebagai secret.
-ALLOWED_ORIGIN = "http://localhost:5173"
+ALLOWED_ORIGIN = "*"
