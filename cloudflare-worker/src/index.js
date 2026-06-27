@@ -1,5 +1,5 @@
 
-const BLACKBOX_API_URL = 'https://api.blackbox.ai/api/chat';
+const BLACKBOX_API_URL = 'https://api.blackbox.ai/v1/chat/completions';
 
 // CORS Headers
 function corsHeaders(origin, allowedOrigin) {
