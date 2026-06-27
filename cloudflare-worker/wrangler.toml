@@ -1,0 +1,9 @@
+name = "research-ai-worker"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+# Jangan letakkan API key di sini!
+# Gunakan: npx wrangler secret put BLACKBOX_API_KEY
+# untuk menyimpan API key secara aman sebagai secret.
+ALLOWED_ORIGIN = "http://localhost:5173"
