@@ -1,4 +1,4 @@
-const API_URL = (import.meta.env.VITE_WORKER_URL || 'https://your-worker.your-subdomain.workers.dev').replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_WORKER_URL || 'https://young-heart-a562.skripzy-app.workers.dev').replace(/\/$/, '');
 
 export async function sendMessage(messages, mode = 'paraphrase', model = 'deepseek-v4-pro', onChunk) {
   const response = await fetch(`${API_URL}/api/chat`, {
