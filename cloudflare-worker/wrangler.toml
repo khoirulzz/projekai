@@ -7,3 +7,7 @@ compatibility_date = "2024-12-01"
 # Gunakan: npx wrangler secret put BLACKBOX_API_KEY
 # untuk menyimpan API key secara aman sebagai secret.
 ALLOWED_ORIGIN = "*"
+
+[[kv_namespaces]]
+binding = "SKILLS"
+id = "cc705177f42144a5aeec137a7eaac99b"

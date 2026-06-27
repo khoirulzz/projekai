@@ -1,25 +1,20 @@
 
 const BLACKBOX_API_URL = 'https://api.blackbox.ai/chat/completions';
 
-// CORS Headers
-function corsHeaders(origin, allowedOrigin) {
-  // In production, restrict to your actual domain
-  const allowed = allowedOrigin === '*' || origin === allowedOrigin;
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
-}
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname.replace(/\/+/g, '/');
     const origin = request.headers.get('Origin') || '';
     const allowedOrigin = env.ALLOWED_ORIGIN || '*';
-    const headers = corsHeaders(origin, allowedOrigin);
+    
+    // CORS Headers
+    const headers = {
+      'Access-Control-Allow-Origin': allowedOrigin === '*' || origin === allowedOrigin ? origin : allowedOrigin,
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    };
 
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
@@ -32,6 +27,84 @@ export default {
         status: 200,
         headers: { ...headers, 'Content-Type': 'application/json' },
       });
+    }
+
+    // SKILLS API Endpoints
+    if (pathname === '/api/skills') {
+      const kv = env.SKILLS;
+      if (!kv) {
+        return new Response(
+          JSON.stringify({ error: 'KV Namespace SKILLS tidak terikat.' }),
+          { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // GET: Ambil semua skill
+      if (request.method === 'GET') {
+        try {
+          const list = await kv.list();
+          const skills = [];
+          for (const key of list.keys) {
+            const content = await kv.get(key.name);
+            skills.push({ name: key.name, content });
+          }
+          return new Response(JSON.stringify(skills), {
+            status: 200,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      // POST: Tambah / Update skill
+      if (request.method === 'POST') {
+        try {
+          const { name, content } = await request.json();
+          if (!name || !content) {
+            return new Response(
+              JSON.stringify({ error: 'name dan content wajib diisi.' }),
+              { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+            );
+          }
+          await kv.put(name, content);
+          return new Response(JSON.stringify({ success: true, name }), {
+            status: 200,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      // DELETE: Hapus skill
+      if (request.method === 'DELETE') {
+        try {
+          const name = url.searchParams.get('name');
+          if (!name) {
+            return new Response(
+              JSON.stringify({ error: 'parameter name wajib diisi.' }),
+              { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } }
+            );
+          }
+          await kv.delete(name);
+          return new Response(JSON.stringify({ success: true, name }), {
+            status: 200,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { ...headers, 'Content-Type': 'application/json' },
+          });
+        }
+      }
     }
 
     // Main chat endpoint
