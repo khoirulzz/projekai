@@ -12,8 +12,8 @@
   "dependencies": {
     "docx": "^9.7.1",
     "file-saver": "^2.0.5",
-    "html2pdf.js": "^0.14.0",
     "lucide-react": "^1.21.0",
+    "pdfmake": "^0.3.11",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",

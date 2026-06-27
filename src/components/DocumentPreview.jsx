@@ -45,7 +45,7 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
       setExporting(true);
       setShowExportMenu(false);
       const timestamp = new Date().toISOString().slice(0, 10);
-      await generatePdf('doc-preview-content', `research-${timestamp}`);
+      await generatePdf(content, `research-${timestamp}`);
       showToast('✅ Dokumen PDF berhasil diunduh!');
     } catch (err) {
       console.error('PDF export error:', err);

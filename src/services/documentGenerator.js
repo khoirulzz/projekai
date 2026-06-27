@@ -1,13 +1,23 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+
+// Setup pdfmake virtual file system fonts
+if (pdfFonts && pdfFonts.pdfMake) {
+  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+}
 
 /**
  * Parse markdown text into structured blocks for document generation.
+ * Handles headings, paragraphs, lists, quotes, and tables.
  */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
   let currentParagraph = [];
+  let currentList = null;
+  let currentTable = null;
 
   const flushParagraph = () => {
     if (currentParagraph.length > 0) {
@@ -16,87 +26,147 @@ function parseMarkdownToBlocks(markdown) {
     }
   };
 
+  const flushList = () => {
+    if (currentList) {
+      blocks.push(currentList);
+      currentList = null;
+    }
+  };
+
+  const flushTable = () => {
+    if (currentTable) {
+      blocks.push(currentTable);
+      currentTable = null;
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmed = line.trim();
+
+    // Check if table row
+    if (trimmed.startsWith('|')) {
+      flushParagraph();
+      flushList();
+
+      const isSeparator = trimmed.match(/^\|[\s\-\|:]+\|$/);
+      if (!isSeparator) {
+        const cells = trimmed.split('|')
+          .slice(1, -1)
+          .map(cell => cell.trim());
+        
+        if (currentTable) {
+          currentTable.rows.push(cells);
+        } else {
+          currentTable = { type: 'table', rows: [cells] };
+        }
+      }
+      continue;
+    } else {
+      flushTable();
+    }
 
     // Headings
-    if (line.startsWith('### ')) {
+    if (trimmed.startsWith('### ')) {
       flushParagraph();
-      blocks.push({ type: 'heading3', content: line.slice(4).trim() });
-    } else if (line.startsWith('## ')) {
+      flushList();
+      blocks.push({ type: 'heading3', content: trimmed.slice(4).trim() });
+    } else if (trimmed.startsWith('## ')) {
       flushParagraph();
-      blocks.push({ type: 'heading2', content: line.slice(3).trim() });
-    } else if (line.startsWith('# ')) {
+      flushList();
+      blocks.push({ type: 'heading2', content: trimmed.slice(3).trim() });
+    } else if (trimmed.startsWith('# ')) {
       flushParagraph();
-      blocks.push({ type: 'heading1', content: line.slice(2).trim() });
+      flushList();
+      blocks.push({ type: 'heading1', content: trimmed.slice(2).trim() });
     }
     // Bullet list
-    else if (line.match(/^[\-\*]\s/)) {
+    else if (trimmed.match(/^[\-\*]\s/)) {
       flushParagraph();
-      blocks.push({ type: 'bullet', content: line.replace(/^[\-\*]\s/, '').trim() });
+      const itemContent = trimmed.replace(/^[\-\*]\s/, '').trim();
+      if (currentList && currentList.type === 'bullet') {
+        currentList.items.push(itemContent);
+      } else {
+        flushList();
+        currentList = { type: 'bullet', items: [itemContent] };
+      }
     }
     // Numbered list
-    else if (line.match(/^\d+\.\s/)) {
+    else if (trimmed.match(/^\d+\.\s/)) {
       flushParagraph();
-      blocks.push({ type: 'numbered', content: line.replace(/^\d+\.\s/, '').trim() });
+      const itemContent = trimmed.replace(/^\d+\.\s/, '').trim();
+      if (currentList && currentList.type === 'numbered') {
+        currentList.items.push(itemContent);
+      } else {
+        flushList();
+        currentList = { type: 'numbered', items: [itemContent] };
+      }
     }
     // Blockquote
-    else if (line.startsWith('> ')) {
+    else if (trimmed.startsWith('> ')) {
       flushParagraph();
-      blocks.push({ type: 'quote', content: line.slice(2).trim() });
+      flushList();
+      blocks.push({ type: 'quote', content: trimmed.slice(2).trim() });
     }
     // Empty line
-    else if (line.trim() === '') {
+    else if (trimmed === '') {
       flushParagraph();
+      flushList();
     }
     // Regular text
     else {
-      currentParagraph.push(line);
+      flushList();
+      currentParagraph.push(trimmed);
     }
   }
   flushParagraph();
+  flushList();
+  flushTable();
 
   return blocks;
 }
 
 /**
- * Parse inline markdown formatting (bold, italic) into TextRun objects.
+ * Parse inline markdown formatting (bold, italic) into styling tokens.
  */
-function parseInlineFormatting(text) {
+function parseInlineToTokens(text) {
   const runs = [];
   const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__|_(.+?)_|`(.+?)`|([^*_`]+))/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
     if (match[2]) {
-      // Bold + Italic (***text***)
-      runs.push(new TextRun({ text: match[2], bold: true, italics: true, font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[2], bold: true, italics: true });
     } else if (match[3]) {
-      // Bold (**text**)
-      runs.push(new TextRun({ text: match[3], bold: true, font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[3], bold: true });
     } else if (match[4]) {
-      // Italic (*text*)
-      runs.push(new TextRun({ text: match[4], italics: true, font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[4], italics: true });
     } else if (match[5]) {
-      // Bold (__text__)
-      runs.push(new TextRun({ text: match[5], bold: true, font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[5], bold: true });
     } else if (match[6]) {
-      // Italic (_text_)
-      runs.push(new TextRun({ text: match[6], italics: true, font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[6], italics: true });
     } else if (match[7]) {
-      // Code (`text`)
-      runs.push(new TextRun({ text: match[7], font: 'Courier New', size: 22 }));
+      runs.push({ text: match[7], code: true });
     } else if (match[8]) {
-      // Regular text
-      runs.push(new TextRun({ text: match[8], font: 'Times New Roman', size: 24 }));
+      runs.push({ text: match[8] });
     }
   }
 
-  if (runs.length === 0) {
-    runs.push(new TextRun({ text, font: 'Times New Roman', size: 24 }));
-  }
+  return runs.length > 0 ? runs : [{ text }];
+}
 
-  return runs;
+/**
+ * Convert inline tokens to docx TextRun objects (TNR 12 font by default).
+ */
+function tokensToDocxRuns(tokens) {
+  return tokens.map(t => new TextRun({
+    text: t.text,
+    bold: t.bold,
+    italics: t.italics,
+    font: t.code ? 'Courier New' : 'Times New Roman',
+    size: t.code ? 22 : 24, // 24 half-points = 12pt
+    color: t.code ? 'A31515' : undefined
+  }));
 }
 
 /**
@@ -108,83 +178,118 @@ export async function generateDocx(markdownText, filename = 'document') {
 
   for (const block of blocks) {
     switch (block.type) {
-      case 'heading1':
+      case 'heading1': {
+        const runs = tokensToDocxRuns(parseInlineToTokens(block.content));
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: block.content, bold: true, font: 'Times New Roman', size: 28 })],
+            children: runs.map(r => { r.size = 32; r.bold = true; return r; }),
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             spacing: { before: 240, after: 120 },
           })
         );
         break;
-
-      case 'heading2':
+      }
+      case 'heading2': {
+        const runs = tokensToDocxRuns(parseInlineToTokens(block.content));
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: block.content, bold: true, font: 'Times New Roman', size: 26 })],
+            children: runs.map(r => { r.size = 28; r.bold = true; return r; }),
             heading: HeadingLevel.HEADING_2,
             spacing: { before: 200, after: 100 },
           })
         );
         break;
-
-      case 'heading3':
+      }
+      case 'heading3': {
+        const runs = tokensToDocxRuns(parseInlineToTokens(block.content));
         children.push(
           new Paragraph({
-            children: [new TextRun({ text: block.content, bold: true, font: 'Times New Roman', size: 24 })],
+            children: runs.map(r => { r.size = 24; r.bold = true; return r; }),
             heading: HeadingLevel.HEADING_3,
             spacing: { before: 160, after: 80 },
           })
         );
         break;
-
+      }
       case 'bullet':
-        children.push(
-          new Paragraph({
-            children: parseInlineFormatting(block.content),
-            bullet: { level: 0 },
-            spacing: { before: 40, after: 40 },
-          })
-        );
+        for (const item of block.items) {
+          const itemRuns = tokensToDocxRuns(parseInlineToTokens(item));
+          children.push(
+            new Paragraph({
+              children: itemRuns,
+              bullet: { level: 0 },
+              spacing: { before: 60, after: 60 },
+            })
+          );
+        }
         break;
 
       case 'numbered':
-        children.push(
-          new Paragraph({
-            children: parseInlineFormatting(block.content),
-            numbering: { reference: 'default-numbering', level: 0 },
-            spacing: { before: 40, after: 40 },
-          })
-        );
+        for (const item of block.items) {
+          const itemRuns = tokensToDocxRuns(parseInlineToTokens(item));
+          children.push(
+            new Paragraph({
+              children: itemRuns,
+              numbering: { reference: 'default-numbering', level: 0 },
+              spacing: { before: 60, after: 60 },
+            })
+          );
+        }
         break;
 
-      case 'quote':
+      case 'quote': {
+        const runs = tokensToDocxRuns(parseInlineToTokens(block.content));
         children.push(
           new Paragraph({
-            children: [
-              new TextRun({ text: block.content, italics: true, font: 'Times New Roman', size: 24, color: '555555' }),
-            ],
+            children: runs.map(r => { r.italics = true; return r; }),
             indent: { left: 720 },
             border: {
-              left: { style: BorderStyle.SINGLE, size: 6, color: '7c5cfc' },
+              left: { style: BorderStyle.SINGLE, size: 12, color: '7c5cfc', space: 24 },
             },
-            spacing: { before: 80, after: 80 },
+            spacing: { before: 120, after: 120 },
           })
         );
         break;
+      }
+
+      case 'table': {
+        const docxTable = new Table({
+          rows: block.rows.map(row => 
+            new TableRow({
+              children: row.map(cell => 
+                new TableCell({
+                  children: [
+                    new Paragraph({ 
+                      children: tokensToDocxRuns(parseInlineToTokens(cell)),
+                      spacing: { before: 60, after: 60 }
+                    })
+                  ],
+                  width: { size: 100 / row.length, type: WidthType.PERCENTAGE }
+                })
+              )
+            })
+          ),
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          spacing: { before: 120, after: 120 }
+        });
+        children.push(docxTable);
+        break;
+      }
 
       case 'paragraph':
-      default:
+      default: {
+        const runs = tokensToDocxRuns(parseInlineToTokens(block.content));
         children.push(
           new Paragraph({
-            children: parseInlineFormatting(block.content),
-            spacing: { before: 80, after: 80, line: 360 },
+            children: runs,
+            spacing: { before: 120, after: 120, line: 360 }, // 1.5 Line Spacing
             alignment: AlignmentType.JUSTIFIED,
-            indent: { firstLine: 720 },
+            indent: { firstLine: 720 }, // First line indent 0.5 inch (720 twips)
           })
         );
         break;
+      }
     }
   }
 
@@ -199,6 +304,7 @@ export async function generateDocx(markdownText, filename = 'document') {
               format: 'decimal',
               text: '%1.',
               alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
             },
           ],
         },
@@ -226,28 +332,109 @@ export async function generateDocx(markdownText, filename = 'document') {
 }
 
 /**
- * Generate a PDF from HTML content and trigger download.
+ * Generate a PDF from markdown text and trigger download.
+ * Generates true selectable-text PDF natively using pdfmake.
  */
-export async function generatePdf(elementId, filename = 'document') {
-  const html2pdf = (await import('html2pdf.js')).default;
-  const element = document.getElementById(elementId);
-  if (!element) throw new Error('Element not found for PDF generation');
+export async function generatePdf(markdownText, filename = 'document') {
+  const blocks = parseMarkdownToBlocks(markdownText);
+  const content = [];
 
-  const opt = {
-    margin: [15, 15, 15, 15],
-    filename: `${filename}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      letterRendering: true,
-    },
-    jsPDF: {
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait',
-    },
+  const convertInlineToPdfNodes = (text) => {
+    const tokens = parseInlineToTokens(text);
+    return tokens.map((t) => {
+      const node = { text: t.text };
+      if (t.bold) node.bold = true;
+      if (t.italics) node.italics = true;
+      if (t.code) {
+        node.background = '#f4f4f4';
+        node.color = '#c7254e';
+      }
+      return node;
+    });
   };
 
-  await html2pdf().set(opt).from(element).save();
+  for (const block of blocks) {
+    switch (block.type) {
+      case 'heading1':
+        content.push({
+          text: convertInlineToPdfNodes(block.content),
+          fontSize: 18,
+          bold: true,
+          alignment: 'center',
+          margin: [0, 15, 0, 10],
+        });
+        break;
+      case 'heading2':
+        content.push({
+          text: convertInlineToPdfNodes(block.content),
+          fontSize: 15,
+          bold: true,
+          margin: [0, 12, 0, 8],
+        });
+        break;
+      case 'heading3':
+        content.push({
+          text: convertInlineToPdfNodes(block.content),
+          fontSize: 13,
+          bold: true,
+          margin: [0, 10, 0, 6],
+        });
+        break;
+      case 'bullet':
+        content.push({
+          ul: block.items.map(item => convertInlineToPdfNodes(item)),
+          margin: [0, 4, 0, 4],
+        });
+        break;
+      case 'numbered':
+        content.push({
+          ol: block.items.map(item => convertInlineToPdfNodes(item)),
+          margin: [0, 4, 0, 4],
+        });
+        break;
+      case 'quote':
+        content.push({
+          text: convertInlineToPdfNodes(block.content),
+          italics: true,
+          margin: [20, 8, 20, 8],
+          color: '#555555',
+        });
+        break;
+      case 'table':
+        content.push({
+          table: {
+            headerRows: 1,
+            widths: Array(block.rows[0].length).fill('*'),
+            body: block.rows.map(row => 
+              row.map(cell => ({
+                stack: convertInlineToPdfNodes(cell),
+                margin: [4, 4, 4, 4]
+              }))
+            )
+          },
+          margin: [0, 10, 0, 10]
+        });
+        break;
+      case 'paragraph':
+      default:
+        content.push({
+          text: convertInlineToPdfNodes(block.content),
+          margin: [0, 6, 0, 6],
+          alignment: 'justify',
+          leadingIndent: 24, // first-line indentation
+        });
+        break;
+    }
+  }
+
+  const docDefinition = {
+    content: content,
+    defaultStyle: {
+      fontSize: 11,
+      lineHeight: 1.4,
+    },
+    pageMargins: [72, 72, 72, 72], // 1 inch standard margins
+  };
+
+  pdfMake.createPdf(docDefinition).download(`${filename}.pdf`);
 }
