@@ -911,3 +911,291 @@
     max-width: 85%;
   }
 }
+
+/* === Modal (Skill Manager) === */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-md);
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.close-btn {
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: var(--space-lg);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+  line-height: 1.6;
+}
+
+.add-skill-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--accent-gradient);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: var(--space-lg);
+  transition: all var(--transition-fast);
+  box-shadow: var(--accent-glow);
+}
+
+.add-skill-btn:hover {
+  box-shadow: var(--accent-glow-strong);
+  transform: translateY(-1px);
+}
+
+.skill-form {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.skill-form h4 {
+  font-size: 14px;
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.form-group {
+  margin-bottom: var(--space-md);
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.form-group input, .form-group textarea {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.form-group input:focus, .form-group textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.btn-cancel {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-medium);
+  transition: all var(--transition-fast);
+}
+
+.btn-cancel:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.btn-save {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--accent-gradient);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  box-shadow: var(--accent-glow);
+  transition: all var(--transition-fast);
+}
+
+.btn-save:hover:not(:disabled) {
+  box-shadow: var(--accent-glow-strong);
+}
+
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.skills-list h4 {
+  font-size: 14px;
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.no-skills {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.skill-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.skill-item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.skill-item-tag {
+  font-family: var(--font-mono);
+  background: rgba(124, 92, 252, 0.15);
+  color: var(--text-accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.skill-item-title {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.skill-item-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.skill-item-actions button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.skill-item-actions button:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+}
+
+.skill-item-actions button.btn-delete:hover {
+  color: #ff5c5c;
+}
+
+/* === Skills Autocomplete Dropdown === */
+.skills-autocomplete {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-xs);
+  animation: fadeInScale 0.15s ease-out;
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+  text-align: left;
+}
+
+.autocomplete-item:hover, .autocomplete-item.active {
+  background: var(--bg-glass-hover);
+}
+
+.autocomplete-tag {
+  font-family: var(--font-mono);
+  color: var(--text-accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.autocomplete-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.autocomplete-item:hover .autocomplete-title, .autocomplete-item.active .autocomplete-title {
+  color: var(--text-primary);
+}
+

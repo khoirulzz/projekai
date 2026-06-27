@@ -5,19 +5,23 @@ import {
   Plus,
   Sparkles,
   FileText,
-  Settings,
+  MessageSquare,
+  Cpu,
+  Smartphone,
 } from 'lucide-react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import DocumentPreview from './DocumentPreview';
 import WelcomeScreen from './WelcomeScreen';
+import SkillManager from './SkillManager';
 import { sendMessage } from '../services/api';
 import { SYSTEM_PROMPTS } from '../constants/prompts';
+import { useSkills } from '../hooks/useSkills';
 
 export default function ChatLayout() {
   // State
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mode, setMode] = useState('paraphrase'); // 'paraphrase' | 'humanize'
+  const [mode, setMode] = useState('universal'); // 'universal' | 'paraphrase' | 'humanize'
   const [chats, setChats] = useState([{ id: 1, title: 'Chat Baru', messages: [] }]);
   const [activeChatId, setActiveChatId] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +29,10 @@ export default function ChatLayout() {
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [selectedModel, setSelectedModel] = useState('deepseek-v4-pro');
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
+
+  // Hook for custom skills
+  const { skills, addSkill, updateSkill, deleteSkill } = useSkills();
 
   const activeChat = chats.find((c) => c.id === activeChatId);
   const displayMessages = activeChat ? [...activeChat.messages] : [];
@@ -61,9 +69,17 @@ export default function ChatLayout() {
       setStreamingContent('');
 
       try {
-        const systemPrompt = mode === 'paraphrase' ? SYSTEM_PROMPTS.paraphrase : SYSTEM_PROMPTS.humanize;
+        // Detect custom skills used in the input text
+        const activeSkill = (skills || []).find((s) => text.toLowerCase().includes(s.tag.toLowerCase()));
+        
+        let baseSystemPrompt = SYSTEM_PROMPTS[mode] || SYSTEM_PROMPTS.universal;
+        
+        if (activeSkill) {
+          baseSystemPrompt = `${baseSystemPrompt}\n\n[USER REQUESTED CUSTOM SKILL: ${activeSkill.title}]\n${activeSkill.content}`;
+        }
+
         const apiMessages = [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: baseSystemPrompt },
           ...newMessages.map((m) => ({ role: m.role, content: m.content })),
         ];
 
@@ -85,7 +101,7 @@ export default function ChatLayout() {
         setStreamingContent('');
       }
     },
-    [activeChat, activeChatId, mode, updateChatMessages, streamingContent]
+    [activeChat, activeChatId, mode, updateChatMessages, streamingContent, selectedModel, skills]
   );
 
   const handleNewChat = () => {
@@ -100,12 +116,10 @@ export default function ChatLayout() {
   };
 
   const handleSelectPrompt = (promptText) => {
-    // Pre-fill the text area focus and set the prompt context
     const input = document.getElementById('chat-input');
     if (input) {
       input.value = promptText + '\n\n';
       input.focus();
-      // Trigger React state update
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
         window.HTMLTextAreaElement.prototype,
         'value'
@@ -115,8 +129,20 @@ export default function ChatLayout() {
     }
   };
 
+  const modeLabel = mode === 'universal'
+    ? '🤖 Mode Universal'
+    : mode === 'paraphrase'
+      ? '✨ Mode Parafrase'
+      : '🧑 Mode Humanisasi';
+
+  const modeSubtitle = mode === 'universal'
+    ? 'Asisten riset serba guna untuk pertanyaan & analisis'
+    : mode === 'paraphrase'
+      ? 'Parafrase teks riset dengan akurat dan natural'
+      : 'Ubah teks AI menjadi tulisan manusiawi';
+
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={{ height: '100dvh' }}>
       {/* Sidebar */}
       <aside className={`sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
@@ -144,27 +170,48 @@ export default function ChatLayout() {
         </div>
 
         <div className="sidebar-footer">
-          <div className="sidebar-mode-selector">
+          <button 
+            className="sidebar-new-chat" 
+            style={{ margin: '0 0 var(--space-md) 0', width: '100%', justifyContent: 'center' }}
+            onClick={() => setSkillModalOpen(true)}
+            id="manage-skills-btn"
+          >
+            ⚙️ Kelola Skill (.md)
+          </button>
+          
+          <div className="sidebar-mode-selector" style={{ flexDirection: 'column', gap: '4px' }}>
             <button
-              className={`mode-btn ${mode === 'paraphrase' ? 'active' : ''}`}
-              onClick={() => setMode('paraphrase')}
-              id="mode-paraphrase"
+              className={`mode-btn ${mode === 'universal' ? 'active' : ''}`}
+              onClick={() => setMode('universal')}
+              id="mode-universal"
+              style={{ width: '100%', textAlign: 'left' }}
             >
-              ✨ Parafrase
+              🤖 Universal
             </button>
-            <button
-              className={`mode-btn ${mode === 'humanize' ? 'active' : ''}`}
-              onClick={() => setMode('humanize')}
-              id="mode-humanize"
-            >
-              🧑 Humanize
-            </button>
+            <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+              <button
+                className={`mode-btn ${mode === 'paraphrase' ? 'active' : ''}`}
+                onClick={() => setMode('paraphrase')}
+                id="mode-paraphrase"
+                style={{ flex: 1 }}
+              >
+                ✨ Parafrase
+              </button>
+              <button
+                className={`mode-btn ${mode === 'humanize' ? 'active' : ''}`}
+                onClick={() => setMode('humanize')}
+                id="mode-humanize"
+                style={{ flex: 1 }}
+              >
+                🧑 Humanize
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="main-content">
+      <main className="main-content" style={{ height: '100dvh' }}>
         <header className="chat-header">
           <div className="chat-header-left">
             <button
@@ -175,14 +222,8 @@ export default function ChatLayout() {
               {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
             </button>
             <div>
-              <div className="chat-header-title">
-                {mode === 'paraphrase' ? '✨ Mode Parafrase' : '🧑 Mode Humanisasi'}
-              </div>
-              <div className="chat-header-subtitle">
-                {mode === 'paraphrase'
-                  ? 'Parafrase teks riset dengan akurat dan natural'
-                  : 'Ubah teks AI menjadi tulisan manusiawi'}
-              </div>
+              <div className="chat-header-title">{modeLabel}</div>
+              <div className="chat-header-subtitle">{modeSubtitle}</div>
             </div>
           </div>
           <div className="chat-header-right">
@@ -207,7 +248,14 @@ export default function ChatLayout() {
           />
         )}
 
-        <MessageInput onSend={handleSend} isLoading={isLoading} mode={mode} selectedModel={selectedModel} onModelChange={setSelectedModel} />
+        <MessageInput 
+          onSend={handleSend} 
+          isLoading={isLoading} 
+          mode={mode} 
+          selectedModel={selectedModel} 
+          onModelChange={setSelectedModel} 
+          skills={skills}
+        />
       </main>
 
       {/* Document Preview Panel */}
@@ -215,6 +263,16 @@ export default function ChatLayout() {
         isOpen={docPanelOpen}
         content={docContent}
         onClose={() => setDocPanelOpen(false)}
+      />
+
+      {/* Custom Skills Manager Modal */}
+      <SkillManager
+        isOpen={skillModalOpen}
+        onClose={() => setSkillModalOpen(false)}
+        skills={skills}
+        addSkill={addSkill}
+        updateSkill={updateSkill}
+        deleteSkill={deleteSkill}
       />
     </div>
   );

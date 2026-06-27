@@ -18,8 +18,7 @@ export default function WelcomeScreen({ onSelectPrompt }) {
       </div>
       <h1 className="welcome-title">ResearchAI Assistant</h1>
       <p className="welcome-subtitle">
-        Asisten riset Anda untuk parafrase dan humanisasi teks. Tempelkan teks riset Anda dan dapatkan hasil yang natural, 
-        siap digunakan, dan bisa langsung diekspor ke Word atau PDF.
+        Asisten riset pintar Anda. Tanyakan apa saja, parafrase, humanisasi teks, atau gunakan sistem Skill dengan mengetikkan <strong>/</strong> atau <strong>@</strong> di kotak chat.
       </p>
       <div className="welcome-cards">
         {WELCOME_PROMPTS.map((item, index) => {

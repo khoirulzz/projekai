@@ -68,7 +68,6 @@ export default {
         const blackboxPayload = {
           messages: messages,
           model: model || 'deepseek-v4-pro',
-          max_tokens: 16384,
           stream: true,
         };
 
