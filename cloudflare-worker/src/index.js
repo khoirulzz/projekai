@@ -1,5 +1,5 @@
 
-const BLACKBOX_API_URL = 'https://api.blackbox.ai/v1/chat/completions';
+const BLACKBOX_API_URL = 'https://api.blackbox.ai/chat/completions';
 
 // CORS Headers
 function corsHeaders(origin, allowedOrigin) {
@@ -58,7 +58,7 @@ export default {
         // Build the request to Blackbox API
         const blackboxPayload = {
           messages: messages,
-          model: model || 'deepseek-v4-pro',
+          model: model || 'blackboxai/deepseek/deepseek-v4-pro',
           stream: true,
         };
 

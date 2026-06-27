@@ -28,7 +28,7 @@ export default function ChatLayout() {
   const [docContent, setDocContent] = useState('');
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [selectedModel, setSelectedModel] = useState('deepseek-v4-pro');
+  const [selectedModel, setSelectedModel] = useState('blackboxai/deepseek/deepseek-v4-pro');
   const [skillModalOpen, setSkillModalOpen] = useState(false);
 
   // Hook for custom skills

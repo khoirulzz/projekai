@@ -8,7 +8,7 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
   const [activeIndex, setActiveIndex] = useState(0);
   const textareaRef = useRef(null);
 
-  const presets = ['deepseek-v4-pro', 'deepseek-v4-flash', 'gpt-4.4-nano'];
+  const presets = ['blackboxai/deepseek/deepseek-v4-pro', 'blackboxai/deepseek/deepseek-v4-flash', 'blackboxai/openai/gpt-4.4-nano'];
   const isPreset = presets.includes(selectedModel);
   const [customModelVal, setCustomModelVal] = useState(isPreset ? '' : selectedModel);
 
@@ -182,36 +182,14 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
               </span>
               <select
                 className="model-select"
-                value={isPreset ? selectedModel : 'custom'}
-                onChange={handleModelSelectChange}
+                value={selectedModel}
+                onChange={(e) => onModelChange(e.target.value)}
                 disabled={isLoading}
               >
-                <option value="deepseek-v4-pro">DeepSeek v4 Pro</option>
-                <option value="deepseek-v4-flash">DeepSeek v4 Flash</option>
-                <option value="gpt-4.4-nano">GPT 4.4 Nano</option>
-                <option value="custom">Custom...</option>
+                <option value="blackboxai/deepseek/deepseek-v4-pro">DeepSeek v4 Pro</option>
+                <option value="blackboxai/deepseek/deepseek-v4-flash">DeepSeek v4 Flash</option>
+                <option value="blackboxai/openai/gpt-4.4-nano">GPT 4.4 Nano</option>
               </select>
-              {!isPreset && (
-                <input
-                  type="text"
-                  className="model-custom-input"
-                  placeholder="Ketik model (misal: /deepseek/deepseek-v4-pro)..."
-                  value={customModelVal}
-                  onChange={handleCustomModelInputChange}
-                  disabled={isLoading}
-                  style={{
-                    marginLeft: '8px',
-                    fontSize: '11px',
-                    padding: '2px 6px',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: 'var(--radius-sm)',
-                    width: '180px',
-                    outline: 'none',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              )}
             </div>
             <span>Shift + Enter untuk baris baru | Ketik @ atau / untuk skill</span>
           </div>
