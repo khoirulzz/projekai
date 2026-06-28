@@ -12,6 +12,7 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
   const [activeIndex, setActiveIndex] = useState(0);
   const [attachments, setAttachments] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef(null);
   const highlighterRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -124,6 +125,36 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
     }
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    // Only set to false if leaving the main container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (!files.length) return;
+    
+    setIsUploading(true);
+    const newAtts = [];
+    for (const file of files) {
+      const content = await readFileContent(file);
+      newAtts.push({ name: file.name, content });
+    }
+    setAttachments(prev => [...prev, ...newAtts]);
+    setIsUploading(false);
+  };
+
   const removeAttachment = (idx) => {
     setAttachments(prev => prev.filter((_, i) => i !== idx));
   };
@@ -189,7 +220,31 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
   };
 
   return (
-    <div className="input-area" style={{ position: 'relative' }}>
+    <div 
+      className="input-area" 
+      style={{ position: 'relative' }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(124, 92, 252, 0.1)',
+          backdropFilter: 'blur(2px)',
+          border: '2px dashed var(--accent-primary)',
+          borderRadius: 'var(--radius-lg)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--accent-primary)',
+          fontWeight: 'bold',
+          fontSize: '16px'
+        }}>
+          Lepaskan file di sini untuk mengunggah
+        </div>
+      )}
       <div className="input-area-inner" style={{ position: 'relative' }}>
         {showAutocomplete && (
           <div className="skills-autocomplete">
