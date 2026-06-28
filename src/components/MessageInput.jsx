@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Paperclip, X, FileText } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import mammoth from 'mammoth';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export default function MessageInput({ onSend, isLoading, selectedModel, onModelChange, skills }) {
   const [text, setText] = useState('');
