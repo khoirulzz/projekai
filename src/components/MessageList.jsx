@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check, FileText } from 'lucide-react';
+import { Copy, Check, FileText, ArrowDown } from 'lucide-react';
 
 function MessageBubble({ message, onOpenDocument }) {
   const [copied, setCopied] = useState(false);
@@ -102,13 +102,34 @@ function TypingIndicator() {
 
 export default function MessageList({ messages, isLoading, onOpenDocument }) {
   const bottomRef = useRef(null);
+  const containerRef = useRef(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    
+    // Check if user is scrolled up (more than 100px from bottom)
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+    
+    setShowScrollButton(!isNearBottom);
+    setIsAutoScrolling(isNearBottom);
+  };
 
   useEffect(() => {
+    if (isAutoScrolling) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading, isAutoScrolling]);
+
+  const scrollToBottom = () => {
+    setIsAutoScrolling(true);
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  };
 
   return (
-    <div className="messages-container">
+    <div className="messages-container" ref={containerRef} onScroll={handleScroll}>
       <div className="messages-inner">
         {messages.map((msg, index) => (
           <MessageBubble
@@ -118,8 +139,36 @@ export default function MessageList({ messages, isLoading, onOpenDocument }) {
           />
         ))}
         {isLoading && <TypingIndicator />}
-        <div ref={bottomRef} />
+        <div ref={bottomRef} style={{ height: '1px' }} />
       </div>
+      
+      {showScrollButton && (
+        <div style={{ position: 'sticky', bottom: '20px', display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 50, marginTop: '-40px' }}>
+          <button 
+            onClick={scrollToBottom}
+            style={{
+              pointerEvents: 'auto',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'var(--shadow-md)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Ke baris terbaru"
+            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-glass-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
+          >
+            <ArrowDown size={20} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
