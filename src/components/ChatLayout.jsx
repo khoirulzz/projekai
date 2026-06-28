@@ -20,8 +20,7 @@ import { useSkills } from '../hooks/useSkills';
 
 export default function ChatLayout() {
   // State
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mode, setMode] = useState('universal'); // 'universal' | 'paraphrase' | 'humanize'
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [chats, setChats] = useState([{ id: 1, title: 'Chat Baru', messages: [] }]);
   const [activeChatId, setActiveChatId] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,10 +57,18 @@ export default function ChatLayout() {
   }, []);
 
   const handleSend = useCallback(
-    async (text) => {
+    async (text, attachments = []) => {
       if (!activeChat) return;
 
-      const userMsg = { role: 'user', content: text };
+      let finalContent = text;
+      
+      if (attachments.length > 0) {
+        attachments.forEach(att => {
+          finalContent += `\n\n[FILE: ${att.name}]\n${att.content}`;
+        });
+      }
+
+      const userMsg = { role: 'user', content: finalContent, attachments, rawText: text };
       const newMessages = [...activeChat.messages, userMsg];
       updateChatMessages(activeChatId, newMessages);
 
@@ -70,12 +77,12 @@ export default function ChatLayout() {
 
       try {
         // Detect custom skills used in the input text
-        const activeSkill = (skills || []).find((s) => text.toLowerCase().includes(s.tag.toLowerCase()));
+        const activeSkills = (skills || []).filter((s) => text.toLowerCase().includes(s.tag.toLowerCase()));
         
-        let baseSystemPrompt = SYSTEM_PROMPTS[mode] || SYSTEM_PROMPTS.universal;
+        let baseSystemPrompt = SYSTEM_PROMPTS.universal;
         
-        if (activeSkill) {
-          baseSystemPrompt = `${baseSystemPrompt}\n\n[USER REQUESTED CUSTOM SKILL: ${activeSkill.title}]\n${activeSkill.content}`;
+        if (activeSkills.length > 0) {
+          baseSystemPrompt = `${baseSystemPrompt}\n\n[USER REQUESTED INSTRUCTIONS]\n${activeSkills.map(s => `=== ${s.title} ===\n${s.content}`).join('\n\n')}`;
         }
 
         const apiMessages = [
@@ -83,7 +90,7 @@ export default function ChatLayout() {
           ...newMessages.map((m) => ({ role: m.role, content: m.content })),
         ];
 
-        const result = await sendMessage(apiMessages, mode, selectedModel, (partialText) => {
+        const result = await sendMessage(apiMessages, 'universal', selectedModel, (partialText) => {
           setStreamingContent(partialText);
         });
 
@@ -101,7 +108,7 @@ export default function ChatLayout() {
         setStreamingContent('');
       }
     },
-    [activeChat, activeChatId, mode, updateChatMessages, streamingContent, selectedModel, skills]
+    [activeChat, activeChatId, updateChatMessages, streamingContent, selectedModel, skills]
   );
 
   const handleNewChat = () => {
@@ -118,28 +125,19 @@ export default function ChatLayout() {
   const handleSelectPrompt = (promptText) => {
     const input = document.getElementById('chat-input');
     if (input) {
-      input.value = promptText + '\n\n';
+      input.value = promptText;
       input.focus();
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
         window.HTMLTextAreaElement.prototype,
         'value'
       ).set;
-      nativeInputValueSetter.call(input, promptText + '\n\n');
+      nativeInputValueSetter.call(input, promptText);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 
-  const modeLabel = mode === 'universal'
-    ? '🤖 Mode Universal'
-    : mode === 'paraphrase'
-      ? '✨ Mode Parafrase'
-      : '🧑 Mode Humanisasi';
-
-  const modeSubtitle = mode === 'universal'
-    ? 'Asisten riset serba guna untuk pertanyaan & analisis'
-    : mode === 'paraphrase'
-      ? 'Parafrase teks riset dengan akurat dan natural'
-      : 'Ubah teks AI menjadi tulisan manusiawi';
+  const modeLabel = '🤖 Asisten AI Universal';
+  const modeSubtitle = 'Tanyakan apa saja, parafrase, humanisasi, atau gunakan custom skill';
 
   return (
     <div className="app-layout" style={{ height: '100dvh' }}>
@@ -172,41 +170,12 @@ export default function ChatLayout() {
         <div className="sidebar-footer">
           <button 
             className="sidebar-new-chat" 
-            style={{ margin: '0 0 var(--space-md) 0', width: '100%', justifyContent: 'center' }}
+            style={{ margin: '0', width: '100%', justifyContent: 'center' }}
             onClick={() => setSkillModalOpen(true)}
             id="manage-skills-btn"
           >
             ⚙️ Kelola Skill (.md)
           </button>
-          
-          <div className="sidebar-mode-selector" style={{ flexDirection: 'column', gap: '4px' }}>
-            <button
-              className={`mode-btn ${mode === 'universal' ? 'active' : ''}`}
-              onClick={() => setMode('universal')}
-              id="mode-universal"
-              style={{ width: '100%', textAlign: 'left' }}
-            >
-              🤖 Universal
-            </button>
-            <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
-              <button
-                className={`mode-btn ${mode === 'paraphrase' ? 'active' : ''}`}
-                onClick={() => setMode('paraphrase')}
-                id="mode-paraphrase"
-                style={{ flex: 1 }}
-              >
-                ✨ Parafrase
-              </button>
-              <button
-                className={`mode-btn ${mode === 'humanize' ? 'active' : ''}`}
-                onClick={() => setMode('humanize')}
-                id="mode-humanize"
-                style={{ flex: 1 }}
-              >
-                🧑 Humanize
-              </button>
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -239,7 +208,7 @@ export default function ChatLayout() {
         </header>
 
         {activeChat && activeChat.messages.length === 0 && !isLoading ? (
-          <WelcomeScreen onSelectPrompt={handleSelectPrompt} />
+          <WelcomeScreen onSelectPrompt={handleSelectPrompt} skills={skills} />
         ) : (
           <MessageList
             messages={displayMessages}
@@ -251,7 +220,6 @@ export default function ChatLayout() {
         <MessageInput 
           onSend={handleSend} 
           isLoading={isLoading} 
-          mode={mode} 
           selectedModel={selectedModel} 
           onModelChange={setSelectedModel} 
           skills={skills}

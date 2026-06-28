@@ -26,8 +26,22 @@ function MessageBubble({ message, onOpenDocument }) {
 
   if (message.role === 'user') {
     return (
-      <div className="message message-user">
-        <div className="message-content">{message.content}</div>
+      <div className="message message-user" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+        {message.attachments && message.attachments.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '70%' }}>
+            {message.attachments.map((att, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}>
+                <FileText size={16} />
+                <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {message.rawText && message.rawText.trim() ? (
+          <div className="message-content">{message.rawText}</div>
+        ) : !message.attachments || message.attachments.length === 0 ? (
+          <div className="message-content">{message.content}</div>
+        ) : null}
       </div>
     );
   }

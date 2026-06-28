@@ -1,31 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, Paperclip, X, FileText } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import mammoth from 'mammoth';
 
-export default function MessageInput({ onSend, isLoading, mode, selectedModel, onModelChange, skills }) {
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+export default function MessageInput({ onSend, isLoading, selectedModel, onModelChange, skills }) {
   const [text, setText] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [attachments, setAttachments] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const presets = ['blackboxai/deepseek/deepseek-v4-pro', 'blackboxai/deepseek/deepseek-v4-flash', 'blackboxai/openai/gpt-4.4-nano'];
-  const isPreset = presets.includes(selectedModel);
-  const [customModelVal, setCustomModelVal] = useState(isPreset ? '' : selectedModel);
-
-  const handleModelSelectChange = (e) => {
-    const val = e.target.value;
-    if (val === 'custom') {
-      onModelChange(customModelVal || 'custom-model-id');
-    } else {
-      onModelChange(val);
-    }
-  };
-
-  const handleCustomModelInputChange = (e) => {
-    const val = e.target.value;
-    setCustomModelVal(val);
-    onModelChange(val);
-  };
+  const presets = ['blackboxai/deepseek/deepseek-v4-pro', 'blackboxai/openai/gpt-5.4-nano', 'blackboxai/meta/llama-3.1-70b'];
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -66,7 +56,6 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
     const textBeforeCursor = text.slice(0, cursorPosition);
     const textAfterCursor = text.slice(cursorPosition);
     
-    // Find the start of the last word
     const lastSpaceIndex = textBeforeCursor.lastIndexOf(' ');
     const newTextBefore = textBeforeCursor.slice(0, lastSpaceIndex + 1) + skill.tag + ' ';
     
@@ -82,10 +71,64 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
     }, 10);
   };
 
+  const readFileContent = async (file) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    try {
+      if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const strings = textContent.items.map(item => item.str);
+          fullText += strings.join(' ') + '\n';
+        }
+        return fullText;
+      } 
+      if (ext === 'docx') {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        return result.value;
+      }
+      return await file.text();
+    } catch (e) {
+      console.error('File parsing error', e);
+      return `[Error parsing ${file.name}]`;
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setIsUploading(true);
+    const newAtts = [];
+    for (const file of files) {
+      const content = await readFileContent(file);
+      newAtts.push({ name: file.name, content });
+    }
+    setAttachments(prev => [...prev, ...newAtts]);
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaste = (e) => {
+    const pasteText = e.clipboardData.getData('text');
+    if (pasteText && pasteText.length > 2000) {
+      e.preventDefault();
+      setAttachments(prev => [...prev, { name: `Pasted_Text_${Date.now().toString().slice(-4)}.txt`, content: pasteText }]);
+    }
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = () => {
-    if (text.trim() && !isLoading) {
-      onSend(text.trim());
+    if ((text.trim() || attachments.length > 0) && !isLoading) {
+      onSend(text.trim(), attachments);
       setText('');
+      setAttachments([]);
       setShowAutocomplete(false);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -116,16 +159,9 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
     }
   };
 
-  const modeLabel = mode === 'universal' 
-    ? '🤖 Universal' 
-    : mode === 'paraphrase' 
-      ? '✨ Parafrase' 
-      : '🧑 Humanisasi';
-
   return (
     <div className="input-area" style={{ position: 'relative' }}>
       <div className="input-area-inner" style={{ position: 'relative' }}>
-        {/* Autocomplete Dropdown */}
         {showAutocomplete && (
           <div className="skills-autocomplete">
             {filteredSkills.map((skill, index) => (
@@ -142,32 +178,57 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
         )}
 
         <div className="input-container">
+          {attachments.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', flexWrap: 'wrap', borderBottom: '1px solid var(--border-medium)' }}>
+              {attachments.map((att, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-glass)', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  <FileText size={14} />
+                  <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                  <button onClick={() => removeAttachment(i)} style={{ marginLeft: '4px', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="input-main">
+            <button 
+              className="msg-action-btn" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || isLoading}
+              title="Unggah File (Word, PDF, TXT, Code)"
+              style={{ padding: '0 8px' }}
+            >
+              <Paperclip size={18} />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              multiple
+              accept=".pdf,.docx,.txt,.md,.js,.py,.html,.css,.json,.csv"
+              onChange={handleFileUpload} 
+            />
             <textarea
               ref={textareaRef}
               className="input-textarea"
-              placeholder={
-                mode === 'universal'
-                  ? 'Tanyakan apa saja... Gunakan @ atau / untuk pemicu skill.'
-                  : mode === 'paraphrase'
-                    ? 'Tempelkan teks yang ingin diparafrase...'
-                    : 'Tempelkan teks yang ingin dihumanisasi...'
-              }
+              placeholder="Tanyakan apa saja... Gunakan @ atau / untuk pemicu skill. (Paste teks panjang >2000 char untuk file instan)"
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               rows={1}
-              disabled={isLoading}
+              disabled={isLoading || isUploading}
               id="chat-input"
             />
             <button
               className="send-btn"
               onClick={handleSend}
-              disabled={!text.trim() || isLoading}
+              disabled={(!text.trim() && attachments.length === 0) || isLoading || isUploading}
               title="Kirim pesan"
               id="send-button"
             >
-              {isLoading ? (
+              {isLoading || isUploading ? (
                 <Sparkles size={18} className="animate-pulse" />
               ) : (
                 <Send size={18} />
@@ -176,19 +237,15 @@ export default function MessageInput({ onSend, isLoading, mode, selectedModel, o
           </div>
           <div className="input-footer">
             <div className="input-footer-left">
-              <span className="input-mode-badge">
-                <Sparkles size={10} />
-                {modeLabel}
-              </span>
               <select
                 className="model-select"
                 value={selectedModel}
                 onChange={(e) => onModelChange(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || isUploading}
               >
                 <option value="blackboxai/deepseek/deepseek-v4-pro">DeepSeek v4 Pro</option>
-                <option value="blackboxai/deepseek/deepseek-v4-flash">DeepSeek v4 Flash</option>
-                <option value="blackboxai/openai/gpt-4.4-nano">GPT 4.4 Nano</option>
+                <option value="blackboxai/openai/gpt-5.4-nano">GPT 5.4 Nano</option>
+                <option value="blackboxai/meta/llama-3.1-70b">Llama 3.1 70B</option>
               </select>
             </div>
             <span>Shift + Enter untuk baris baru | Ketik @ atau / untuk skill</span>

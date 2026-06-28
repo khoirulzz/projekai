@@ -1,4 +1,5 @@
-import { RefreshCw, UserCheck, FileText, GraduationCap } from 'lucide-react';
+import { useState } from 'react';
+import { RefreshCw, UserCheck, FileText, GraduationCap, Plus, MoreVertical, X } from 'lucide-react';
 import { WELCOME_PROMPTS } from '../constants/prompts';
 
 const iconMap = {
@@ -8,7 +9,21 @@ const iconMap = {
   GraduationCap: GraduationCap,
 };
 
-export default function WelcomeScreen({ onSelectPrompt }) {
+export default function WelcomeScreen({ onSelectPrompt, skills = [] }) {
+  const [customShortcutId, setCustomShortcutId] = useState(localStorage.getItem('custom_shortcut_id') || null);
+  const [isEditingCustom, setIsEditingCustom] = useState(false);
+
+  const customSkill = skills.find(s => s.id === customShortcutId);
+
+  const handleSetCustom = (id) => {
+    setCustomShortcutId(id);
+    localStorage.setItem('custom_shortcut_id', id);
+    setIsEditingCustom(false);
+  };
+
+  const usedTags = ['/prfrs', '/hmz', '/rvw'];
+  const availableSkills = skills.filter(s => !usedTags.includes(s.tag));
+
   return (
     <div className="welcome-screen">
       <div className="welcome-icon">
@@ -38,6 +53,52 @@ export default function WelcomeScreen({ onSelectPrompt }) {
             </div>
           );
         })}
+        
+        {/* Custom 4th Card */}
+        {isEditingCustom ? (
+          <div className="welcome-card custom-card editing">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div className="welcome-card-title" style={{ margin: 0 }}>Pilih Skill:</div>
+              <button onClick={() => setIsEditingCustom(false)} style={{ color: 'var(--text-tertiary)' }}><X size={14} /></button>
+            </div>
+            <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+              {availableSkills.length > 0 ? availableSkills.map(s => (
+                <div key={s.id} 
+                     onClick={() => handleSetCustom(s.id)}
+                     style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', marginBottom: '2px', background: 'var(--bg-tertiary)' }}>
+                  {s.tag} - {s.title}
+                </div>
+              )) : (
+                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Tidak ada skill tambahan.</div>
+              )}
+            </div>
+          </div>
+        ) : customSkill ? (
+          <div className="welcome-card" style={{ position: 'relative' }}>
+            <div 
+              style={{ position: 'absolute', top: '8px', right: '8px', padding: '4px', cursor: 'pointer', zIndex: 2, color: 'var(--text-tertiary)' }}
+              onClick={(e) => { e.stopPropagation(); setIsEditingCustom(true); }}
+            >
+              <MoreVertical size={16} />
+            </div>
+            <div onClick={() => onSelectPrompt(customSkill.tag + ' ')}>
+              <div className="welcome-card-icon">
+                <Plus size={18} />
+              </div>
+              <div className="welcome-card-title">{customSkill.title}</div>
+              <div className="welcome-card-desc">Gunakan skill khusus {customSkill.tag}</div>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="welcome-card" 
+            onClick={() => setIsEditingCustom(true)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' }}
+          >
+            <Plus size={24} style={{ color: 'var(--text-tertiary)', marginBottom: '8px' }} />
+            <div className="welcome-card-title" style={{ color: 'var(--text-secondary)' }}>Tambah Pintasan</div>
+          </div>
+        )}
       </div>
     </div>
   );
