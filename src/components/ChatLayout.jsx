@@ -24,8 +24,32 @@ export default function ChatLayout() {
   // State
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [chats, setChats] = useState([{ id: 1, title: 'Chat Baru', messages: [] }]);
-  const [activeChatId, setActiveChatId] = useState(1);
+  const [chats, setChats] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chatHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to parse chatHistory from localStorage');
+    }
+    return [{ id: 1, title: 'Chat Baru', messages: [] }];
+  });
+  
+  const [activeChatId, setActiveChatId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chatHistory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Default to the most recent chat
+          return parsed[parsed.length - 1].id;
+        }
+      }
+    } catch (e) {}
+    return 1;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [docContent, setDocContent] = useState('');
   const [docPanelOpen, setDocPanelOpen] = useState(false);
@@ -37,6 +61,10 @@ export default function ChatLayout() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('chatHistory', JSON.stringify(chats));
+  }, [chats]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -165,17 +193,52 @@ export default function ChatLayout() {
           Chat Baru
         </button>
 
-        <div className="sidebar-chats">
-          {chats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`sidebar-chat-item ${chat.id === activeChatId ? 'active' : ''}`}
-              onClick={() => setActiveChatId(chat.id)}
-            >
-              {chat.title}
-            </div>
-          ))}
-        </div>
+          <div className="sidebar-chats">
+            {chats.map((chat) => (
+              <div
+                key={chat.id}
+                className={`sidebar-chat-item ${chat.id === activeChatId ? 'active' : ''}`}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                onClick={() => setActiveChatId(chat.id)}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {chat.title}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newChats = chats.filter(c => c.id !== chat.id);
+                    if (newChats.length === 0) {
+                      const newId = Date.now();
+                      setChats([{ id: newId, title: 'Chat Baru', messages: [] }]);
+                      setActiveChatId(newId);
+                    } else {
+                      setChats(newChats);
+                      if (activeChatId === chat.id) {
+                        setActiveChatId(newChats[newChats.length - 1].id);
+                      }
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-tertiary)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '4px'
+                  }}
+                  title="Hapus Chat"
+                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            ))}
+          </div>
 
         <div className="sidebar-footer">
           <button 
