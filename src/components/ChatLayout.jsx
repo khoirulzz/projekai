@@ -110,7 +110,7 @@ export default function ChatLayout() {
         console.error('API Error:', err);
         const errorMsg = {
           role: 'assistant',
-          content: `⚠️ **Error:** ${err.message}\n\nPastikan Cloudflare Worker Anda sudah aktif dan URL sudah dikonfigurasi di file \`.env\`.`,
+          content: `⚠️ **Pesan Sistem:**\n${err.message}`,
         };
         updateChatMessages(activeChatId, [...newMessages, errorMsg]);
       } finally {
