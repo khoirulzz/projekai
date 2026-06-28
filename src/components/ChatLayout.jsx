@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   PanelLeftClose,
   PanelLeft,
@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Cpu,
   Smartphone,
+  Moon,
+  Sun
 } from 'lucide-react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -21,6 +23,7 @@ import { useSkills } from '../hooks/useSkills';
 export default function ChatLayout() {
   // State
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [chats, setChats] = useState([{ id: 1, title: 'Chat Baru', messages: [] }]);
   const [activeChatId, setActiveChatId] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +32,13 @@ export default function ChatLayout() {
   const [streamingContent, setStreamingContent] = useState('');
   const [selectedModel, setSelectedModel] = useState('blackboxai/deepseek/deepseek-v4-pro');
   const [skillModalOpen, setSkillModalOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   // Hook for custom skills
   const { skills, addSkill, updateSkill, deleteSkill } = useSkills();
@@ -196,6 +206,13 @@ export default function ChatLayout() {
             </div>
           </div>
           <div className="chat-header-right">
+            <button
+              className="header-icon-btn"
+              onClick={toggleTheme}
+              title="Toggle Tema"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button
               className="header-icon-btn"
               onClick={() => setDocPanelOpen(!docPanelOpen)}

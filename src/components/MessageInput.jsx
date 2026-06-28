@@ -13,6 +13,7 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
   const [attachments, setAttachments] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef(null);
+  const highlighterRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const presets = ['blackboxai/deepseek/deepseek-v4-pro', 'blackboxai/openai/gpt-5.4-nano', 'blackboxai/meta/llama-3.1-70b'];
@@ -21,6 +22,9 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+      if (highlighterRef.current) {
+        highlighterRef.current.style.height = textareaRef.current.style.height;
+      }
     }
   }, [text]);
 
@@ -132,6 +136,7 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
       setShowAutocomplete(false);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+        if (highlighterRef.current) highlighterRef.current.style.height = 'auto';
       }
     }
   };
@@ -157,6 +162,30 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
         handleSend();
       }
     }
+  };
+
+  const handleScroll = (e) => {
+    if (highlighterRef.current) {
+      highlighterRef.current.scrollTop = e.target.scrollTop;
+      highlighterRef.current.scrollLeft = e.target.scrollLeft;
+    }
+  };
+
+  const renderHighlightedText = () => {
+    if (!text) return null;
+    
+    // Split by words to find tags
+    const words = text.split(/(\s+)/);
+    return words.map((word, i) => {
+      if (word.startsWith('@') || word.startsWith('/')) {
+        const query = word.toLowerCase();
+        const matched = (skills || []).some(s => s.tag.toLowerCase() === query);
+        if (matched) {
+          return <span key={i} style={{ color: '#00d4aa', fontWeight: 'bold' }}>{word}</span>;
+        }
+      }
+      return <span key={i}>{word}</span>;
+    });
   };
 
   return (
@@ -209,18 +238,49 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
               accept=".pdf,.docx,.txt,.md,.js,.py,.html,.css,.json,.csv"
               onChange={handleFileUpload} 
             />
-            <textarea
-              ref={textareaRef}
-              className="input-textarea"
-              placeholder="Tanyakan apa saja... Gunakan @ atau / untuk pemicu skill. (Paste teks panjang >2000 char untuk file instan)"
-              value={text}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              rows={1}
-              disabled={isLoading || isUploading}
-              id="chat-input"
-            />
+            <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+              <div
+                ref={highlighterRef}
+                className="input-textarea"
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  color: 'transparent',
+                  pointerEvents: 'none',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  overflowY: 'auto',
+                  zIndex: 0
+                }}
+              >
+                {renderHighlightedText()}
+                {/* Trailing space to ensure cursor height matches */}
+                {text.endsWith('\n') ? <br /> : null}
+              </div>
+              <textarea
+                ref={textareaRef}
+                className="input-textarea"
+                style={{
+                  background: 'transparent',
+                  color: 'transparent',
+                  caretColor: 'var(--text-primary)',
+                  zIndex: 1,
+                }}
+                placeholder="Tanyakan apa saja... Gunakan @ atau / untuk pemicu skill. (Paste teks panjang >2000 char untuk file instan)"
+                value={text}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                onScroll={handleScroll}
+                rows={1}
+                disabled={isLoading || isUploading}
+                id="chat-input"
+              />
+            </div>
             <button
               className="send-btn"
               onClick={handleSend}

@@ -63,3 +63,30 @@
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 0px;
 }
+
+[data-theme="light"] {
+  /* === Color Palette — Light Mode === */
+  --bg-primary: #f2f4f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8f9fa;
+  --bg-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-glass-hover: rgba(240, 242, 245, 0.9);
+
+  /* Text Colors */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a5e;
+  --text-tertiary: #6b6b80;
+  --text-accent: #7c5cfc;
+
+  /* Border */
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-accent: rgba(124, 92, 252, 0.3);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 16px 64px rgba(0, 0, 0, 0.15);
+}

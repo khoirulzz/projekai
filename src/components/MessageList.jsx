@@ -24,6 +24,17 @@ function MessageBubble({ message, onOpenDocument }) {
     }
   };
 
+  const renderHighlightedText = (text) => {
+    if (!text) return null;
+    const words = text.split(/(\s+)/);
+    return words.map((word, i) => {
+      if (word.startsWith('@') || word.startsWith('/')) {
+        return <span key={i} style={{ color: '#00d4aa', fontWeight: 'bold' }}>{word}</span>;
+      }
+      return <span key={i}>{word}</span>;
+    });
+  };
+
   if (message.role === 'user') {
     return (
       <div className="message message-user" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
@@ -38,9 +49,9 @@ function MessageBubble({ message, onOpenDocument }) {
           </div>
         )}
         {message.rawText && message.rawText.trim() ? (
-          <div className="message-content">{message.rawText}</div>
+          <div className="message-content">{renderHighlightedText(message.rawText)}</div>
         ) : !message.attachments || message.attachments.length === 0 ? (
-          <div className="message-content">{message.content}</div>
+          <div className="message-content">{renderHighlightedText(message.content)}</div>
         ) : null}
       </div>
     );
