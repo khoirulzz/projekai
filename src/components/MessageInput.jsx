@@ -249,7 +249,7 @@ export default function MessageInput({ onSend, isLoading, selectedModel, onModel
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  color: 'transparent',
+                  color: 'var(--text-primary)',
                   pointerEvents: 'none',
                   whiteSpace: 'pre-wrap',
                   wordWrap: 'break-word',
