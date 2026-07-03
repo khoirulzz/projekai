@@ -3,11 +3,10 @@ import {
   PanelLeftClose,
   PanelLeft,
   Plus,
-  Sparkles,
   FileText,
-  MessageSquare,
-  Cpu,
-  Smartphone,
+  Settings,
+  Trash2,
+  X,
   Moon,
   Sun
 } from 'lucide-react';
@@ -19,9 +18,9 @@ import SkillManager from './SkillManager';
 import { sendMessage } from '../services/api';
 import { SYSTEM_PROMPTS } from '../constants/prompts';
 import { useSkills } from '../hooks/useSkills';
+import { DEFAULT_MODEL, WRITING_MODELS } from '../constants/models';
 
 export default function ChatLayout() {
-  // State
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [chats, setChats] = useState(() => {
@@ -31,31 +30,34 @@ export default function ChatLayout() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {
+    } catch {
       console.error('Failed to parse chatHistory from localStorage');
     }
     return [{ id: 1, title: 'Chat Baru', messages: [] }];
   });
-  
+
   const [activeChatId, setActiveChatId] = useState(() => {
     try {
       const saved = localStorage.getItem('chatHistory');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Default to the most recent chat
           return parsed[parsed.length - 1].id;
         }
       }
-    } catch (e) {}
+    } catch {
+      // Keep the initial chat when saved history cannot be parsed.
+    }
     return 1;
   });
   const [isLoading, setIsLoading] = useState(false);
   const [docContent, setDocContent] = useState('');
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [selectedModel, setSelectedModel] = useState('blackboxai/deepseek/deepseek-v4-pro');
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [skillModalOpen, setSkillModalOpen] = useState(false);
+
+  const { skills, addSkill, updateSkill, deleteSkill } = useSkills();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -66,30 +68,27 @@ export default function ChatLayout() {
     localStorage.setItem('chatHistory', JSON.stringify(chats));
   }, [chats]);
 
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-
-  // Hook for custom skills
-  const { skills, addSkill, updateSkill, deleteSkill } = useSkills();
-
-  const activeChat = chats.find((c) => c.id === activeChatId);
+  const activeChat = chats.find((chat) => chat.id === activeChatId);
+  const activeModel = WRITING_MODELS.find((model) => model.value === selectedModel);
   const displayMessages = activeChat ? [...activeChat.messages] : [];
 
-  // If streaming, show partial AI message
   if (streamingContent && isLoading) {
     displayMessages.push({ role: 'assistant', content: streamingContent });
   }
 
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+
   const updateChatMessages = useCallback((chatId, newMessages) => {
     setChats((prev) =>
-      prev.map((c) => {
-        if (c.id === chatId) {
-          const title =
-            newMessages.length > 0 && newMessages[0].role === 'user'
-              ? newMessages[0].content.slice(0, 40) + (newMessages[0].content.length > 40 ? '...' : '')
-              : c.title;
-          return { ...c, messages: newMessages, title };
-        }
-        return c;
+      prev.map((chat) => {
+        if (chat.id !== chatId) return chat;
+
+        const firstUserMessage = newMessages.find((message) => message.role === 'user');
+        const title = firstUserMessage
+          ? firstUserMessage.content.slice(0, 40) + (firstUserMessage.content.length > 40 ? '...' : '')
+          : chat.title;
+
+        return { ...chat, messages: newMessages, title };
       })
     );
   }, []);
@@ -99,10 +98,10 @@ export default function ChatLayout() {
       if (!activeChat) return;
 
       let finalContent = text;
-      
+
       if (attachments.length > 0) {
-        attachments.forEach(att => {
-          finalContent += `\n\n[FILE: ${att.name}]\n${att.content}`;
+        attachments.forEach((attachment) => {
+          finalContent += `\n\n[FILE: ${attachment.name}]\n${attachment.content}`;
         });
       }
 
@@ -114,18 +113,22 @@ export default function ChatLayout() {
       setStreamingContent('');
 
       try {
-        // Detect custom skills used in the input text
-        const activeSkills = (skills || []).filter((s) => text.toLowerCase().includes(s.tag.toLowerCase()));
-        
+        const lowerText = text.toLowerCase();
+        const activeSkills = (skills || []).filter((skill) =>
+          skill.tag && lowerText.includes(skill.tag.toLowerCase())
+        );
+
         let baseSystemPrompt = SYSTEM_PROMPTS.universal;
-        
+
         if (activeSkills.length > 0) {
-          baseSystemPrompt = `${baseSystemPrompt}\n\n[USER REQUESTED INSTRUCTIONS]\n${activeSkills.map(s => `=== ${s.title} ===\n${s.content}`).join('\n\n')}`;
+          baseSystemPrompt = `${baseSystemPrompt}\n\n[USER REQUESTED INSTRUCTIONS]\n${activeSkills
+            .map((skill) => `=== ${skill.title} ===\n${skill.content}`)
+            .join('\n\n')}`;
         }
 
         const apiMessages = [
           { role: 'system', content: baseSystemPrompt },
-          ...newMessages.map((m) => ({ role: m.role, content: m.content })),
+          ...newMessages.map((message) => ({ role: message.role, content: message.content })),
         ];
 
         const result = await sendMessage(apiMessages, 'universal', selectedModel, (partialText) => {
@@ -138,7 +141,7 @@ export default function ChatLayout() {
         console.error('API Error:', err);
         const errorMsg = {
           role: 'assistant',
-          content: `⚠️ **Pesan Sistem:**\n${err.message}`,
+          content: `**Pesan Sistem:**\n${err.message}`,
         };
         updateChatMessages(activeChatId, [...newMessages, errorMsg]);
       } finally {
@@ -153,6 +156,23 @@ export default function ChatLayout() {
     const newId = Date.now();
     setChats((prev) => [...prev, { id: newId, title: 'Chat Baru', messages: [] }]);
     setActiveChatId(newId);
+    if (window.innerWidth <= 768) setSidebarOpen(false);
+  };
+
+  const handleDeleteChat = (chatId) => {
+    const nextChats = chats.filter((chat) => chat.id !== chatId);
+
+    if (nextChats.length === 0) {
+      const newId = Date.now();
+      setChats([{ id: newId, title: 'Chat Baru', messages: [] }]);
+      setActiveChatId(newId);
+      return;
+    }
+
+    setChats(nextChats);
+    if (activeChatId === chatId) {
+      setActiveChatId(nextChats[nextChats.length - 1].id);
+    }
   };
 
   const handleOpenDocument = (content) => {
@@ -162,30 +182,36 @@ export default function ChatLayout() {
 
   const handleSelectPrompt = (promptText) => {
     const input = document.getElementById('chat-input');
-    if (input) {
-      input.value = promptText;
-      input.focus();
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        'value'
-      ).set;
-      nativeInputValueSetter.call(input, promptText);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    if (!input) return;
+
+    input.value = promptText;
+    input.focus();
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      'value'
+    ).set;
+    nativeInputValueSetter.call(input, promptText);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
-  const modeLabel = '🤖 Asisten AI Universal';
-  const modeSubtitle = 'Tanyakan apa saja, parafrase, humanisasi, atau gunakan custom skill';
-
   return (
-    <div className="app-layout" style={{ height: '100dvh' }}>
-      {/* Sidebar */}
+    <div className="app-layout">
       <aside className={`sidebar ${!sidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <div className="sidebar-logo-icon">R</div>
-            <span className="sidebar-logo-text">ResearchAI</span>
+            <div>
+              <span className="sidebar-logo-text">ResearchAI</span>
+              <span className="sidebar-logo-subtext">Writing Studio</span>
+            </div>
           </div>
+          <button
+            className="sidebar-close-btn"
+            onClick={() => setSidebarOpen(false)}
+            title="Tutup sidebar"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <button className="sidebar-new-chat" onClick={handleNewChat} id="new-chat-btn">
@@ -193,93 +219,75 @@ export default function ChatLayout() {
           Chat Baru
         </button>
 
-          <div className="sidebar-chats">
-            {chats.map((chat) => (
-              <div
-                key={chat.id}
-                className={`sidebar-chat-item ${chat.id === activeChatId ? 'active' : ''}`}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                onClick={() => setActiveChatId(chat.id)}
+        <div className="sidebar-chats">
+          {chats.map((chat) => (
+            <div
+              key={chat.id}
+              className={`sidebar-chat-item ${chat.id === activeChatId ? 'active' : ''}`}
+              onClick={() => {
+                setActiveChatId(chat.id);
+                if (window.innerWidth <= 768) setSidebarOpen(false);
+              }}
+            >
+              <span className="sidebar-chat-title">{chat.title}</span>
+              <button
+                className="sidebar-chat-delete"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDeleteChat(chat.id);
+                }}
+                title="Hapus chat"
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {chat.title}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const newChats = chats.filter(c => c.id !== chat.id);
-                    if (newChats.length === 0) {
-                      const newId = Date.now();
-                      setChats([{ id: newId, title: 'Chat Baru', messages: [] }]);
-                      setActiveChatId(newId);
-                    } else {
-                      setChats(newChats);
-                      if (activeChatId === chat.id) {
-                        setActiveChatId(newChats[newChats.length - 1].id);
-                      }
-                    }
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-tertiary)',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '4px'
-                  }}
-                  title="Hapus Chat"
-                  onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
-                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                </button>
-              </div>
-            ))}
-          </div>
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
 
         <div className="sidebar-footer">
-          <button 
-            className="sidebar-new-chat" 
-            style={{ margin: '0', width: '100%', justifyContent: 'center' }}
+          <button
+            className="sidebar-manage-skills"
             onClick={() => setSkillModalOpen(true)}
             id="manage-skills-btn"
           >
-            ⚙️ Kelola Skill (.md)
+            <Settings size={16} />
+            Kelola Skill
           </button>
+          <div className="sidebar-skill-count">{skills.length} skill tersimpan</div>
         </div>
       </aside>
+      {sidebarOpen && (
+        <button
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Tutup sidebar"
+        />
+      )}
 
-      {/* Main Content */}
-      <main className="main-content" style={{ height: '100dvh' }}>
+      <main className="main-content">
         <header className="chat-header">
           <div className="chat-header-left">
             <button
               className="toggle-sidebar-btn"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               id="toggle-sidebar"
+              title="Sidebar"
             >
               {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
             </button>
             <div>
-              <div className="chat-header-title">{modeLabel}</div>
-              <div className="chat-header-subtitle">{modeSubtitle}</div>
+              <div className="chat-header-title">Asisten Penulisan Riset</div>
+              <div className="chat-header-subtitle">{activeModel?.label || selectedModel}</div>
             </div>
           </div>
           <div className="chat-header-right">
-            <button
-              className="header-icon-btn"
-              onClick={toggleTheme}
-              title="Toggle Tema"
-            >
+            <button className="header-icon-btn" onClick={toggleTheme} title="Tema">
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button
               className="header-icon-btn"
               onClick={() => setDocPanelOpen(!docPanelOpen)}
-              title="Toggle panel dokumen"
+              title="Panel dokumen"
               id="toggle-doc-panel"
             >
               <FileText size={18} />
@@ -297,23 +305,21 @@ export default function ChatLayout() {
           />
         )}
 
-        <MessageInput 
-          onSend={handleSend} 
-          isLoading={isLoading} 
-          selectedModel={selectedModel} 
-          onModelChange={setSelectedModel} 
+        <MessageInput
+          onSend={handleSend}
+          isLoading={isLoading}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
           skills={skills}
         />
       </main>
 
-      {/* Document Preview Panel */}
       <DocumentPreview
         isOpen={docPanelOpen}
         content={docContent}
         onClose={() => setDocPanelOpen(false)}
       />
 
-      {/* Custom Skills Manager Modal */}
       <SkillManager
         isOpen={skillModalOpen}
         onClose={() => setSkillModalOpen(false)}

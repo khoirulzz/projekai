@@ -48,7 +48,7 @@ export async function sendMessage(messages, mode = 'paraphrase', model = 'deepse
                 fullText += content;
                 onChunk?.(fullText);
               }
-            } catch (e) {
+            } catch {
               console.warn('Failed to parse chunk:', data);
             }
           }
@@ -66,7 +66,7 @@ export async function sendMessage(messages, mode = 'paraphrase', model = 'deepse
               fullText += content;
               onChunk?.(fullText);
             }
-          } catch (e) {
+          } catch {
             console.warn('Failed to parse final chunk:', data);
           }
         }

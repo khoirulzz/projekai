@@ -119,7 +119,7 @@ export default {
         }
 
         const body = await request.json();
-        const { messages, mode, model } = body;
+        const { messages, mode: _mode, model } = body;
 
         if (!messages || !Array.isArray(messages)) {
           return new Response(

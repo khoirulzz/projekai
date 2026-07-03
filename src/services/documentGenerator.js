@@ -49,7 +49,7 @@ function parseMarkdownToBlocks(markdown) {
       flushParagraph();
       flushList();
 
-      const isSeparator = trimmed.match(/^\|[\s\-\|:]+\|$/);
+      const isSeparator = trimmed.match(/^\|[\s|:-]+\|$/);
       if (!isSeparator) {
         const cells = trimmed.split('|')
           .slice(1, -1)
@@ -81,9 +81,9 @@ function parseMarkdownToBlocks(markdown) {
       blocks.push({ type: 'heading1', content: trimmed.slice(2).trim() });
     }
     // Bullet list
-    else if (trimmed.match(/^[\-\*]\s/)) {
+    else if (trimmed.match(/^[-*]\s/)) {
       flushParagraph();
-      const itemContent = trimmed.replace(/^[\-\*]\s/, '').trim();
+      const itemContent = trimmed.replace(/^[-*]\s/, '').trim();
       if (currentList && currentList.type === 'bullet') {
         currentList.items.push(itemContent);
       } else {

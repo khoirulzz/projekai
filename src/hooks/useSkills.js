@@ -32,7 +32,7 @@ export function useSkills() {
           let parsed;
           try {
             parsed = JSON.parse(s.content);
-          } catch (e) {
+          } catch {
             // fallback if it was plain text
             parsed = { title: s.name.replace('.md', ''), tag: '/' + s.name.replace('.md', '').toLowerCase().replace(/\s+/g, ''), content: s.content };
           }

@@ -23,3 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.codex
+.agents
+available_models.md
+body.json
+model_statuses.md
+test_all_chat_models.ps1
+test_blackbox.ps1
+test_dashboard_models.ps1

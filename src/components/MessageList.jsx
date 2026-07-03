@@ -37,13 +37,13 @@ function MessageBubble({ message, onOpenDocument }) {
 
   if (message.role === 'user') {
     return (
-      <div className="message message-user" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+      <div className="message message-user">
         {message.attachments && message.attachments.length > 0 && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '70%' }}>
+          <div className="message-attachments">
             {message.attachments.map((att, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}>
+              <div key={i} className="message-attachment">
                 <FileText size={16} />
-                <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                <span>{att.name}</span>
               </div>
             ))}
           </div>
@@ -139,31 +139,15 @@ export default function MessageList({ messages, isLoading, onOpenDocument }) {
           />
         ))}
         {isLoading && <TypingIndicator />}
-        <div ref={bottomRef} style={{ height: '1px' }} />
+        <div ref={bottomRef} className="messages-bottom" />
       </div>
       
       {showScrollButton && (
-        <div style={{ position: 'sticky', bottom: '20px', display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 50, marginTop: '-40px' }}>
+        <div className="scroll-bottom-wrap">
           <button 
             onClick={scrollToBottom}
-            style={{
-              pointerEvents: 'auto',
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-medium)',
-              borderRadius: '50%',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 'var(--shadow-md)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
+            className="scroll-bottom-btn"
             title="Ke baris terbaru"
-            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-glass-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
           >
             <ArrowDown size={20} />
           </button>

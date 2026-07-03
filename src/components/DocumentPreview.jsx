@@ -11,8 +11,8 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
   const exportRef = useRef(null);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (exportRef.current && !exportRef.current.contains(e.target)) {
+    const handleClickOutside = (event) => {
+      if (exportRef.current && !exportRef.current.contains(event.target)) {
         setShowExportMenu(false);
       }
     };
@@ -20,8 +20,8 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const showToast = (msg) => {
-    setToast(msg);
+  const showToast = (message) => {
+    setToast(message);
     setTimeout(() => setToast(''), 3000);
   };
 
@@ -31,10 +31,10 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
       setShowExportMenu(false);
       const timestamp = new Date().toISOString().slice(0, 10);
       await generateDocx(content, `research-${timestamp}`);
-      showToast('✅ Dokumen Word berhasil diunduh!');
+      showToast('Dokumen Word berhasil diunduh.');
     } catch (err) {
       console.error('DOCX export error:', err);
-      showToast('❌ Gagal mengekspor Word');
+      showToast('Gagal mengekspor Word.');
     } finally {
       setExporting(false);
     }
@@ -46,10 +46,10 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
       setShowExportMenu(false);
       const timestamp = new Date().toISOString().slice(0, 10);
       await generatePdf(content, `research-${timestamp}`);
-      showToast('✅ Dokumen PDF berhasil diunduh!');
+      showToast('Dokumen PDF berhasil diunduh.');
     } catch (err) {
       console.error('PDF export error:', err);
-      showToast('❌ Gagal mengekspor PDF');
+      showToast('Gagal mengekspor PDF.');
     } finally {
       setExporting(false);
     }
@@ -79,16 +79,16 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
                 <div className="export-menu">
                   <button className="export-menu-item" onClick={handleExportDocx} id="export-docx-btn">
                     <FileText size={16} />
-                    Unduh sebagai Word (.docx)
+                    Unduh Word (.docx)
                   </button>
                   <button className="export-menu-item" onClick={handleExportPdf} id="export-pdf-btn">
                     <FileDown size={16} />
-                    Unduh sebagai PDF (.pdf)
+                    Unduh PDF (.pdf)
                   </button>
                 </div>
               )}
             </div>
-            <button className="close-panel-btn" onClick={onClose} id="close-doc-panel">
+            <button className="close-panel-btn" onClick={onClose} id="close-doc-panel" title="Tutup">
               <X size={18} />
             </button>
           </div>
@@ -96,23 +96,15 @@ export default function DocumentPreview({ isOpen, content, onClose }) {
         <div className="doc-panel-body">
           <div className="doc-preview" id="doc-preview-content">
             {content ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
-              </ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             ) : (
-              <p style={{ textAlign: 'center', color: '#999', fontStyle: 'italic' }}>
-                Belum ada dokumen untuk ditampilkan. Klik ikon dokumen pada pesan AI untuk membukanya di sini.
-              </p>
+              <p className="doc-empty">Belum ada dokumen untuk ditampilkan.</p>
             )}
           </div>
         </div>
       </div>
 
-      {toast && (
-        <div className={`toast ${toast.includes('✅') ? 'success' : ''}`}>
-          {toast}
-        </div>
-      )}
+      {toast && <div className={`toast ${toast.includes('berhasil') ? 'success' : ''}`}>{toast}</div>}
     </>
   );
 }

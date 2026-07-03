@@ -33,7 +33,7 @@ export default function WelcomeScreen({ onSelectPrompt, skills = [] }) {
       </div>
       <h1 className="welcome-title">ResearchAI Assistant</h1>
       <p className="welcome-subtitle">
-        Asisten riset pintar Anda. Tanyakan apa saja, parafrase, humanisasi teks, atau gunakan sistem Skill dengan mengetikkan <strong>/</strong> atau <strong>@</strong> di kotak chat.
+        Ruang kerja untuk menyusun, merapikan, dan mengembangkan tulisan riset dengan konteks yang tetap tersimpan.
       </p>
       <div className="welcome-cards">
         {WELCOME_PROMPTS.map((item, index) => {
@@ -57,26 +57,24 @@ export default function WelcomeScreen({ onSelectPrompt, skills = [] }) {
         {/* Custom 4th Card */}
         {isEditingCustom ? (
           <div className="welcome-card custom-card editing">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <div className="welcome-card-title" style={{ margin: 0 }}>Pilih Skill:</div>
-              <button onClick={() => setIsEditingCustom(false)} style={{ color: 'var(--text-tertiary)' }}><X size={14} /></button>
+            <div className="custom-card-header">
+              <div className="welcome-card-title">Pilih Skill</div>
+              <button onClick={() => setIsEditingCustom(false)} title="Tutup"><X size={14} /></button>
             </div>
-            <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+            <div className="custom-skill-list">
               {availableSkills.length > 0 ? availableSkills.map(s => (
-                <div key={s.id} 
-                     onClick={() => handleSetCustom(s.id)}
-                     style={{ padding: '4px 8px', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', marginBottom: '2px', background: 'var(--bg-tertiary)' }}>
+                <div key={s.id} onClick={() => handleSetCustom(s.id)} className="custom-skill-option">
                   {s.tag} - {s.title}
                 </div>
               )) : (
-                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Tidak ada skill tambahan.</div>
+                <div className="custom-skill-empty">Tidak ada skill tambahan.</div>
               )}
             </div>
           </div>
         ) : customSkill ? (
-          <div className="welcome-card" style={{ position: 'relative' }}>
+          <div className="welcome-card custom-card">
             <div 
-              style={{ position: 'absolute', top: '8px', right: '8px', padding: '4px', cursor: 'pointer', zIndex: 2, color: 'var(--text-tertiary)' }}
+              className="custom-card-menu"
               onClick={(e) => { e.stopPropagation(); setIsEditingCustom(true); }}
             >
               <MoreVertical size={16} />
@@ -91,12 +89,11 @@ export default function WelcomeScreen({ onSelectPrompt, skills = [] }) {
           </div>
         ) : (
           <div 
-            className="welcome-card" 
+            className="welcome-card add-shortcut-card" 
             onClick={() => setIsEditingCustom(true)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' }}
           >
-            <Plus size={24} style={{ color: 'var(--text-tertiary)', marginBottom: '8px' }} />
-            <div className="welcome-card-title" style={{ color: 'var(--text-secondary)' }}>Tambah Pintasan</div>
+            <Plus size={24} />
+            <div className="welcome-card-title">Tambah Pintasan</div>
           </div>
         )}
       </div>
