@@ -1,7 +1,7 @@
 export const WRITING_MODELS = [
   {
     value: 'blackboxai/deepseek/deepseek-v4-pro',
-    label: 'DeepSeek v4 Pro',
+    label: 'Deepseek V4 Pro',
     note: 'default'
   },
   {
@@ -10,24 +10,19 @@ export const WRITING_MODELS = [
     note: 'cepat'
   },
   {
-    value: 'blackboxai/meta/llama-3.1-70b',
-    label: 'Llama 3.1 70B',
-    note: 'versatile'
+    value: 'blackboxai/openai/gpt-5.4',
+    label: 'GPT 5.4',
+    note: 'kuat'
   },
   {
-    value: 'blackboxai/google/gemini-3.5-flash',
-    label: 'Gemini Flash',
-    note: 'cepat & efisien'
+    value: 'blackboxai/x-ai/grok-4.3',
+    label: 'Grok 4.3',
+    note: 'aktif'
   },
   {
-    value: 'blackboxai/nvidia/nemotron-3-ultra',
-    label: 'NVidia',
-    note: 'beta'
-  },
-  {
-    value: 'blackboxai/arcee-ai/trinity-large-thinking',
-    label: 'Arce AI',
-    note: 'beta'
+    value: 'blackboxai/google/gemma-4-26b-a4b-it',
+    label: 'Gemma 4 26B',
+    note: 'natural Indonesia'
   }
 ];
 

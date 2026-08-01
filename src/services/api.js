@@ -1,6 +1,6 @@
 export const API_URL = (import.meta.env.VITE_WORKER_URL || 'https://young-heart-a562.skripzy-app.workers.dev').replace(/\/$/, '');
 
-export async function sendMessage(messages, mode = 'paraphrase', model = 'deepseek-v4-pro', onChunk, maxRetries = 3) {
+export async function sendMessage(messages, mode = 'paraphrase', model = 'blackboxai/deepseek/deepseek-v4-pro', onChunk, maxRetries = 3) {
   let attempt = 0;
 
   while (attempt <= maxRetries) {

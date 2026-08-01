@@ -28,6 +28,9 @@ dist-ssr
 available_models.md
 body.json
 model_statuses.md
-test_all_chat_models.ps1
-test_blackbox.ps1
-test_dashboard_models.ps1
+
+# Local API smoke tests and generated model reports
+test_*.ps1
+test_*.py
+active_models_latest.json
+skipped_models_latest.json
